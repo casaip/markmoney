@@ -8,11 +8,12 @@ import CategoryChart from '@/components/CategoryChart';
 import type { Transaction, DailyGroup, MonthlyStats } from '@/lib/db';
 
 function getTodayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function getMonthStr(date: Date): string {
-  return date.toISOString().slice(0, 7);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function formatMonth(month: string): string {
