@@ -135,4 +135,83 @@ export function getDailyGroups(month: string): DailyGroup[] {
   return Array.from(groups.values());
 }
 
+export interface DailyTotal {
+  day: number;
+  income: number;
+  expense: number;
+}
+
+export function getDailyTotals(month: string): DailyTotal[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT CAST(strftime('%d', date) AS INTEGER) as day,
+      COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+      COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
+    FROM transactions
+    WHERE strftime('%Y-%m', date) = ?
+    GROUP BY day
+    ORDER BY day
+  `).all(month) as DailyTotal[];
+
+  const [y, m] = month.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const result: DailyTotal[] = [];
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const row = rows.find((r) => r.day === d);
+    result.push({
+      day: d,
+      income: row?.income || 0,
+      expense: row?.expense || 0,
+    });
+  }
+
+  return result;
+}
+
+export interface WeekSummary {
+  label: string;
+  startDate: string;
+  expense: number;
+  income: number;
+}
+
+function formatLocalDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function getWeeklyStats(referenceDateStr: string): WeekSummary[] {
+  const db = getDb();
+  const weeks: WeekSummary[] = [];
+  const [ry, rm, rd] = referenceDateStr.split('-').map(Number);
+  const referenceDate = new Date(ry, rm - 1, rd);
+
+  for (let w = 3; w >= 0; w--) {
+    const endDate = new Date(referenceDate);
+    endDate.setDate(endDate.getDate() - w * 7);
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 6);
+
+    const start = formatLocalDate(startDate);
+    const end = formatLocalDate(endDate);
+
+    const row = db.prepare(`
+      SELECT
+        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
+      FROM transactions
+      WHERE date >= ? AND date <= ?
+    `).get(start, end) as { income: number; expense: number };
+
+    weeks.push({
+      label: `${startDate.getMonth() + 1}/${startDate.getDate()} - ${endDate.getMonth() + 1}/${endDate.getDate()}`,
+      startDate: start,
+      expense: row.expense,
+      income: row.income,
+    });
+  }
+
+  return weeks;
+}
+
 

@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import DashboardCards from '@/components/DashboardCards';
+import SavingsProgress from '@/components/SavingsProgress';
+import DailyBarChart from '@/components/DailyBarChart';
+import WeeklyBarChart from '@/components/WeeklyBarChart';
+import CategoryBreakdown from '@/components/CategoryBreakdown';
 import AddTransactionForm from '@/components/AddTransactionForm';
 import DailyLog from '@/components/DailyLog';
-import CategoryChart from '@/components/CategoryChart';
-import type { Transaction, DailyGroup, MonthlyStats } from '@/lib/db';
+import type { Transaction, DailyGroup, MonthlyStats, DailyTotal, WeekSummary } from '@/lib/db';
 
 function getTodayStr(): string {
   const d = new Date();
@@ -26,6 +29,8 @@ export default function Home() {
   const [month, setMonth] = useState(() => getMonthStr(new Date()));
   const [stats, setStats] = useState<MonthlyStats | null>(null);
   const [days, setDays] = useState<DailyGroup[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<WeekSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Add form state
@@ -38,12 +43,17 @@ export default function Home() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [statsRes, daysRes] = await Promise.all([
+    const today = getTodayStr();
+    const [statsRes, daysRes, dailyRes, weeklyRes] = await Promise.all([
       fetch(`/api/stats?month=${month}`),
       fetch(`/api/transactions?month=${month}&group=daily`),
+      fetch(`/api/stats?month=${month}&type=daily`),
+      fetch(`/api/stats?type=weekly&today=${today}`),
     ]);
     if (statsRes.ok) setStats(await statsRes.json());
     if (daysRes.ok) setDays(await daysRes.json());
+    if (dailyRes.ok) setDailyTotals(await dailyRes.json());
+    if (weeklyRes.ok) setWeeklyStats(await weeklyRes.json());
     setLoading(false);
   }, [month]);
 
@@ -126,7 +136,16 @@ export default function Home() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-4 space-y-4 pb-24">
-        {/* Monthly Summary Cards */}
+        {/* Savings Progress */}
+        {stats && (
+          <SavingsProgress
+            saved={stats.balance}
+            income={stats.totalIncome}
+            expense={stats.totalExpense}
+          />
+        )}
+
+        {/* Income / Expense Cards */}
         {stats && (
           <DashboardCards
             totalIncome={stats.totalIncome}
@@ -135,11 +154,19 @@ export default function Home() {
           />
         )}
 
-        {/* Category Charts */}
+        {/* Charts */}
+        {!loading && (
+          <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-5">
+            <DailyBarChart data={dailyTotals} />
+            <WeeklyBarChart data={weeklyStats} />
+          </div>
+        )}
+
+        {/* Category Breakdown */}
         {stats && stats.categoryBreakdown.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-4">
-            <CategoryChart data={stats.categoryBreakdown} type="income" />
-            <CategoryChart data={stats.categoryBreakdown} type="expense" />
+            <CategoryBreakdown data={stats.categoryBreakdown} type="expense" />
+            <CategoryBreakdown data={stats.categoryBreakdown} type="income" />
           </div>
         )}
 
