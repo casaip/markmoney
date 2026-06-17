@@ -10,11 +10,18 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "MarkMoney - Personal Finance Tracker",
   description: "Track your daily expenses and income",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "MarkMoney",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -24,6 +31,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
+      <head>
+        <link rel="apple-touch-icon" href="/icon.svg" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="MarkMoney" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
       <body className="min-h-full">{children}</body>
     </html>
   );

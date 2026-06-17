@@ -1,0 +1,17 @@
+{
+  "name": "MarkMoney",
+  "short_name": "MarkMoney",
+  "description": "Track daily expenses and income",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
